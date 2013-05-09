@@ -1,0 +1,1071 @@
+\documentclass[12pt]{amsart}
+
+%Document formatting details
+\tolerance=400
+\topmargin = 0.1in \evensidemargin = 0.2in \oddsidemargin = 0.2in
+\textheight = 20.5cm \headheight = 10pt
+\textwidth = 15.5cm
+\setlength{\parskip}{.1in}
+
+%Include these packages
+\usepackage{amsmath, amsthm, latexsym, amssymb, amsfonts}
+\usepackage[mathscr]{euscript}
+\usepackage{cite}
+
+%Setting up theorem environment with shared counter
+\newenvironment{pf}{\proof[\proofname]}{\endproof}
+\theoremstyle{plain}
+\newtheorem{Th}{Theorem}[section]
+\newtheorem{Lemma}[Th]{Lemma}
+\newtheorem{Proposition}[Th]{Proposition}
+\newtheorem{Remark}[Th]{Remark}
+\newtheorem{Definition}[Th]{Definition}
+\newtheorem{example}[Th]{Example}
+
+%Blackboard Bold
+\newcommand{\F}{\mathbb{F}}
+\newcommand{\AT}{\mathbb{F}^*}
+\newcommand{\Int}{\mathbb{Z}}
+\newcommand{\Reals}{\mathbb{R}}
+
+%(Affine) General Linear Group
+\newcommand{\GL}[2]{\mathrm{GL}\left(#1,#2\right)}
+\newcommand{\AGL}[2]{\mathrm{AGL}\left(#1,#2\right)}
+
+%Operators
+\DeclareMathOperator{\Span}{span}
+\DeclareMathOperator{\Reps}{reps}
+\DeclareMathOperator{\Convex}{conv}
+\DeclareMathOperator{\im}{Im}
+\newcommand{\dist}[1]{\mathrm{\emph{d}}\left(#1\right)}
+\DeclareMathOperator{\Zeros}{Z_{max}}
+
+\begin{document}
+
+%Normal Title
+%\title{Classifying Configurations for Toric Codes}
+%\author{Cameron Jay Tuckerman\\
+%\tiny{c.tuckerman@csuohio.edu}}
+%\date{\today}
+%\maketitle
+%\begin{abstract}
+%Toric Codes, constructed using a polytope $P$ and the method developed by Hansen \cite{hansen}, and  Generalized Toric Codes, constructed using configurations $S \subset (P \cap \mathbb{Z}^n)$ being explored by Little \cite{little}, are classes of codes from which many best-known codes are found; currently, random sampling methods are used to find these champions. We describe an optimized approach to enumerate all non-equivalent configurations used to describe these Generalized Toric Codes.
+%\end{abstract}
+
+
+%Sr Project Title Page
+\begin{titlepage}
+\begin{center}
+\title{Classifying Configurations for Toric Codes}
+\author{Cameron Jay Tuckerman\\
+\tiny{c.tuckerman@csuohio.edu}}
+\date{\today}
+\maketitle
+\small{MTH 496: Senior Project}\\
+\small{Advisor: Professor I. Soprunov, PhD}
+\end{center}
+\end{titlepage}
+\newpage
+\begin{abstract}
+Toric Codes, constructed using a lattice polytope $P$ and the method developed by Hansen \cite{hansen}, and  Generalized Toric Codes, constructed using configurations $S \subset (P \cap \mathbb{Z}^n)$ being explored by Little \cite{little}, are classes of codes from which many best-known codes are found; currently, random sampling methods are used to find these champions. We describe an optimized approach to enumerate all non-equivalent configurations used to describe these Generalized Toric Codes.
+\end{abstract}
+\newpage
+\tableofcontents
+\newpage
+
+%
+%
+%
+%
+%
+%
+
+\section{Introduction}
+Recently, there has been increased interest in the possibility of finding new, best known error correcting codes which are Generalized Toric Codes. Little, in \cite{little}, determines configurations which generate Generalized Toric Codes with poor parameters, however he does not find methods to generate codes with good parameters. Undergraduate students working at MSRI-UP, in \cite{census1} and \cite{census2}, use randomized searching to generate codes --- their search discovered two new best known codes. Random heuristic searching is currently the best method for finding champions which are Generalized Toric Codes.
+
+We will discuss the basics of error correcting codes, as well as the construction of Toric Codes and Generalized Toric Codes. We also give algorithms to find all non-equivalent lattice point configurations to enumerate all possible Generalized Toric Codes.
+
+For this project, we created optimized python methods to enumerate all Generalized Toric Codes over some finite field with given block length and dimension, and allow for the calculation of their minimum distances. We visualize the results to allow for human-guided, heuristic searching for new best known codes. Included in the appendices are the methods and classes developed for this project, as well as example output, consisting of all Generalized Toric codes of block length 49 and dimesnion 4 over $\F_8$, along with their respective minimum distances.
+
+\section{Error Correcting Codes}
+In todays technology connected world, the communication of information plays a vital role. Often times, during communication, imperfect communication channels introduce errors in the communicated information. \emph{Error correcting codes} are the mathematical construct that encodes the to-be-transmited information, by mapping the original information to a \emph{codeword}, in such a way that the original information can be decoded even when errors are introduced due to the communication channel.
+
+The \emph{alphabet}, $A$, is the set of symbols from which codewords are built up. Often times, since we are interested in encoding information to be transmitted by classical computers, we would like our codewords to be made up of zeros and ones. Here $A=\left\{0,1\right\}$, which is the finite field of two elements, $\F_2$.
+
+All codewords will have the same length, the \emph{blocklength} of the code. Therefore, the codewords will all be in $\F_2^n$, where $n$ is the block length. Now we can think of encoding as a map,
+\begin{equation*}
+ev: \F_q^k \to \F_q^n
+\end{equation*}
+where $\im ev$ is the set of all possible codewords, called the \emph{code}, $C$.
+
+The \emph{Hamming distance}, $\dist{c_1,c_2}$ where $c_1$ and $c_2$ are codewords, is the number of coordinates in which the codewords differ. We can then define the \emph{minimum distance} for our code, $\dist{C}$,
+\begin{equation*}
+\dist{C} = \min \left\{\dist{c_i,c_j} \mid c_{i},c_{j} \in C, c_{i} \neq c_{j} \right\}
+\end{equation*}
+
+Hereafter, we will be concerning ourselves with a class of codes called \emph{linear codes}, where $\im ev$ forms a subspace of $\F_q^k$. These codes are often referred to as $\left[n,k,d\right]$ codes, where $n$ is the block length, $k$ is the dimension, and $d$ is the minimum distance. As suggested by its name, the evaluation maps of linear codes are able to represented as multiplication on the right by a $k \times n$ matrix. We will see an example of this in the archetypical example of linear codes, the Reed-Solomon Codes:
+
+
+\begin{example}Reed-Solomon Codes
+
+Working over some field, $\F_q$, with primitive element $\alpha$
+\begin{equation*}
+\F_q = \left\{0,1,\alpha,\alpha^n,...,\alpha^{q-2}\right\}
+\end{equation*}
+
+let $\mathscr{L}$ be the space of polynomials of degree less than $k$, i.e.
+\begin{equation*}
+\mathscr{L} = \left\{f \in \F_q[x] \mid \deg f < k\right\}
+\end{equation*}
+
+We can then define an evalution map,
+\begin{equation*}
+ev: \mathscr{L} \to \F_q^{q-1} , f \mapsto \left(f(1),f(\alpha),...,f(\alpha^{q-2}) \right) 
+\end{equation*}
+
+This lends itself to a natural matrix representation, using a standard basis of $k$-degree polynomials, $\left\{1,x,x^2,...,x^k\right\}$, e.g. $1+2x^3$ is the row-vector $(1,0,0,2,\cdots,0)$, 
+\begin{equation*}
+ev(f) = f\left( \begin{array}{ccccc}
+1 & 1 & 1 & \cdots & 1  \\
+1 & \alpha & \alpha^2 & \cdots & \alpha^{q-2} \\
+1 & \alpha^2 & \alpha^4 & \cdots & (\alpha^{q-2})^2 \\
+\vdots &  & & & \\
+1 & \alpha^k & \alpha^{2k} & \cdots & (\alpha^{q-2})^k \end{array} \right)
+\end{equation*}
+
+$C$, the image of $ev$, is the Reed-Solomon code with block length $n=q-1$ and degree $k$. 
+\begin{Proposition} The Reed-Solomon code is a $\left[n,k,n-k+1\right]$ code.
+\end{Proposition}
+\begin{pf}
+Since distinct polynomials of degree at most $k$ can agree in at most $k$ points, they must disagree in at least $q-k$ spots. By construction, $n=q-1$ so $q=n+1$, hence any two polynomials must disagree in at least $q-k = n+1-k$ spots. This is the definition of the minimum distance. Clearly there exists a polynomial with $k$ nonzero, distinct roots.
+\end{pf}
+\end{example}
+
+
+\section{Toric Codes}
+Consider the $r$-cube $K_q^r = ([0,q-2])^r$, where $q$ is some power of a prime, and $P \subset K_q^r$, some convex lattice polytope. Consider monomials of $r$ variables of the form $\bold{x}^s = x_1^{s_1} x_2^{s_2} \cdots x_r^{s_r}, s = \left(s_1,s_2,\cdots,s_r\right)$, and the polynomial vector space over $\F_q$\begin{equation*}
+\mathscr{L}(P) = \Span \left\{\bold{x}^s \mid s \in P \cap \Int^r \right\}
+\end{equation*}
+
+We can define an evaluation map by mapping each polynomial $f$ to the tuple consisting of the values of $f$ when evaluated at all points in the algebraic torus, $(\F_q^*)^r$, in lexicographic order, $(\F_q^*)^r = \left\{p_1,p_2,...,p_n\right\}$):
+\begin{equation*}
+ev: \mathscr{L}(P) \to \F_q^n, f \mapsto \left(f(p_1),f(p_2),...,f(p_n)\right)
+\end{equation*}
+where $n=(q-1)^r$. The image of this map is our code, $C_P$. Such a code is called a \emph{Toric Code}.
+
+\begin{example}
+Working over $\F_3$, consider $P = \Convex \left\{(0,0),(0,1),(1,0)\right\}$. Clearly $P \subset K_3^2$, so $P$ should define a toric code.
+\begin{equation*}
+\mathscr{L}(P)=\Span \left\{1,x,y \right\}
+\end{equation*}
+
+In general, a polynomial $f$ in $r$ variables can have at most $(\deg f)(q-1)^{r-1}$ zeros in $(\F_q^*)^r$ \cite{serre}. In our case, where the maximum degree is 1, gives us an upper bound of 2 zeros. In fact, we do have a polynomial with 2 zeros. Consider the polynomial $1+x+y$ which vanishes at both $(0,1)$ and $(1,0)$, both points in the torus $(\AT_3)^2$.
+
+Therefore $C_P$ is a $\left[3,3,2\right]$ linear code over $\F_3$.
+
+\end{example}
+
+
+\begin{Proposition}
+Reed-Solomon codes are a special case of 1-Dimensional Toric Codes.
+\end{Proposition}
+\begin{pf}
+Recall the construction of the $\left[n,k,n-k+1\right]$ Reed-Solomon code, $C$, over a finite field $\F_q$, with block length $n=q-1$ and dimension at most $n$.
+\begin{equation*}
+C = \left\{ \left(f(1),f(\alpha),...,f(\alpha^{q-2})\right) \mid f \in \mathscr{L} \right\}
+\end{equation*}
+where
+\begin{equation*}
+\mathscr{L} = \left\{f \in \F_q[x] \mid \deg f \le k\right\}
+\end{equation*}
+
+Now, we construct a toric code $C_P$, using a polytope $P=\left[0,k\right]$, the line segment from 0 to $k$.
+\begin{eqnarray*}
+\mathscr{L}(P) & = & \Span \left\{ x^p \mid p \in P \right\} \\
+& = & \left\{f \in \F_q[x] \mid \deg f \le k\right\}
+\end{eqnarray*}
+
+Clearly, $\mathscr{L} = \mathscr{L}(P)$.
+
+\end{pf}
+
+\section{Generalized Toric Codes}
+In the same way that Toric Codes can be seen as a logical extension of Reed-Solomon codes, so too may we consider the extension of generalized Reed-Solomon codes, which we will now define.
+
+Working over some field, $\F_q$, consider some finite set of points $S \subset \F_q$, where for some $k<n$, $0<s\le k$ $\forall s \in S$, and consider the vector space spanned by the monomials $x^s, s \in S$:
+\begin{equation*}
+\mathscr{L}(S) = \Span\left\{x^s \mid s \in S\right\}
+\end{equation*}
+
+This is clearly a subspace of the vector space spanned in the construction of $RS(n,k)$. From this vector space, we can construct a code, a \emph{generalized Reed-Solomon code} in the same way in which the original Reed-Solomon Code is constructed, using the same map $ev$. It is this procedure we will follow to define Generalized Toric Codes.
+
+Consider $K_q^r$, where $q$ is some prime power, and some set $S \subset K_q^r \cap \Int^r$. Now, our vector space, $\mathscr{L}(S)$ is constructed in the expected manner,
+\begin{equation*}
+\mathscr{L}(S) = \Span \left\{\bold{x}^s \mid s \in S \right\}
+\end{equation*}
+and we can define the evaluation map by evaluating each polynomial at every point in $(\AT_q)^r$ in lexiocgraphic order, $(\F_q^*)^r = \left\{p_1,p_2,...,p_n\right\}$, i.e.
+\begin{equation*}
+ev: \mathscr{L}(S) \to \F_q^n, f \mapsto \left(f(p_1),f(p_2),...,f(p_n)\right)
+\end{equation*}
+where, as before, $n=(q-1)^r$.
+
+The image of this map is a \emph{generalized toric code}, $C_S$.
+
+\section{Choosing Configurations}
+\subsection{Equivalent Configurations} 
+For a linear code $C$ with generating matrix $G$, if $C'$ is a code with generating matrix $G'$ such that there is a map from $G$ to $G'$ consisting only of elementary row operations, then $C$ is said to be equivalent to $C'$.
+
+Let $T(s) = v + sA$ be an affine linear transformation, where $v$ is some vector in $\Int_{q-1}^n$ and $A$ is matrix, the determinant of which is in $U(\Int_{q-1}^n)$, the invertible elements of $\Int_{q-1}^n$, and hence a member of $\GL{n}{q-1}$. The set of all such transformations is the Affine General Linear Group, $\AGL{n}{q-1}$, which forms a group under composition. For some set $S=\left\{s_1,s_2,\cdots,s_n\right\} \subset \Int_q^r$, can define $T.S$ to be $\left\{T(s_1),T(s_2),\cdots,T(s_n)\right\}$. Because $T \in \mathrm{AGL}$ is invertible, it also follows that $\vert S \vert = \vert T.S \vert$. It is shown in \cite{census1} that $C_S$ is equivalent to $C_{T.S}$
+
+\begin{example}1-dimensional codes
+
+Consider $f(x) = t_0 + t_1x + ... + t_m x^m \in \mathscr{L}(S)$, a vector space over $\mathbb{F}_q$ with roots $\alpha_i \in \mathbb{F}_q^*$. Then the polynomial $x^vf(x) = t_0 x^v + t_1 x^{1+v} + ... + t_m x^{m+v}$ clearly vanishes at every $\alpha_i$, hence the set of zeros of $f(x)$ and $x^v f(x)$ are the same.
+
+Additionally consider the polynomial $f(x^a) = t_0 + t_1x^a + ... +t_mx^{am}$, $a \in U(\mathbb{Z}_{q-1})$. Then $f(x^a)$ will vanish at $\alpha_i^{a^{-1}}$, where $a^{-1}$ is the inverse of $a$, which exists because $a$ is a unit. Hence the set of zeros of $f(x)$ and $f(x^a)$ are the same.
+
+We can combine these monomial transformations as a map $x^s \mapsto x^{v+sa}$, which is a member of $\mathrm{AGL}(1,q-1)$. It is clear that the dimension and block length of two codes $C_S$ and $C_{T.S}$ are equal, and we have shown that their minimum distances must be the same, hence they will generated codes with the same parameters, in fact they are equivalent.
+\end{example}
+
+\subsection{``Bad'' Configurations}
+When considering a set from which one wants to construct a generalized toric code, one can view that set $S$ as a subset of $(\Convex S) \cap \Int^r$. Research has been done into which points from $(\Convex S) \cap \Int^r$ should not be excluded in the construction of a generalized toric code. By decreasing the size of $S$, the dimension of the code is therefore decreased. The benefit of a generalized toric code would therefore be if there were some set $S$ for which $\dist{C_S} > \dist{C_{\Convex S}}$.  It is explored by Little in \cite{little} when removing points is not advantageous to the resultant code. His work is partially based off of the work of Cohen on polynomials over finite fields in \cite{cohen}, as well as the relationship between Minkowski length of polytopes and the minimum distance of the toric code they define explored by Soprunov and Soprunova in \cite{is2}.
+
+The first remark is that for fields of sufficiently large characteristic, all polynomials factor completely. The statement is made stronger by proving that if a particular polynomial will not factor of a field, there is a finite extension of the field over which it will.
+
+Let $f$ be some polynomial of degree $l$. It has an associated factorization pattern $\lambda = 1^{a_1} 2^{a_2} \cdots l^{a_l}$, where $f$ factors into $a_i$ irreducible polynomials of degree $i$ (not necessarily distinct). Cohen, in \cite{cohen}, provides a bound for the number of polynomials in our vector space which have any specific factorization pattern, in particular when $\lambda = 1^l$ which ensures that there exists a $q$ for which there will be polynomials in our vector space which will factor completely. This means that for sufficiently large fields, $\dist{C_S} = \dist{C_{S'}}$ where $S'$ is a strict subset of $S$. Generalized Toric Codes are therefore worse in general than their complete counterparts over large fields.
+
+Even over small fields, Little finds strict subsets $S' \subset S$ for which $\dist{C_{S'}} = \dist{C_S}$ based on the Minkowski decomposition of $\Convex S$. One can define the \emph{Minkowski sum} of two polytopes $P$ and $Q$, where $P+Q = \left\{p + q \mid p \in P, q \in Q \right\}$. In this way, one can decompose a polytope into the sum of other polytopes, called a \emph{Minkowski decomposition}, the \emph{Minkowski length} being the number of polytope addends in the decomposition. The \emph{full Minkowski length} of a polytope is defined to be the largest Minkowski length of all Minkowski decompositions of all subpolytopes of $P$ --- this term is closely related to the minimum distance based on the Soprunov-Soprunova theorem \cite{is2}.
+
+Little develops the following theorem:
+
+\begin{Th}
+\cite{little}
+%Suppose $S$ is a subset of a lattice polytope with full Minkowski length $l$, and there exists $Q \subset P$ such that their exists a Minkowski decomposition of $Q$ into $l$ primitive lattice segments. If $S$ contains the endpoints of $Q$ and the elements of $S$ are not multiples of some fixed integer, then for sufficiently large fields, $\dist{C_S} = \dist{C_P}$.
+Let $P$ be a lattice convex polygon in $\Reals^2$ of full Minkowski
+length $l$.  Suppose in addition that there is a unique $Q \subset P$ 
+which decomposes as a sum of $l$ nonempty polygons, and that
+each of them is a copy of a primitive lattice segment $I$, so $Q = l I$.  
+Let $S \subset P \cap \Int^2$ satisfy 
+\begin{enumerate}
+\item $S$ contains the endpoints of $Q$, and
+\item The $k_i$ and $l$ are not all multiples of any fixed
+integer $j > 1$.
+\end{enumerate}
+Then for all primes $p$ sufficiently large and all $h \ge 1$, letting $q = p^h$,
+we have
+$$d(C_S(\F_q)) = d(C_P(\F_q)) = (q - 1)^2 - l(q - 1).$$
+Moreover, for all $q$, there exists $h \ge 1$ such 
+that the same statement is true if we replace $q$ by $q^h$. 
+\end{Th}
+
+Therefore, its clear that when constructing $S$ by removing points from a polytope, it would not be advantageous to remove points on $Q$, if some $Q$ exists.
+\subsection{``Good'' Configurations}
+The question then still remains how to find ``good'' points to remove from a polytope, i.e. which points if any can be removed to create $S \subset P \cap \Int^r$, such $C_S$ has a greater minimum distance than $C_P$.
+
+Undergraduate researchers using Magma, in \cite{census1} and \cite{census2}, discovered codes with best known minimum distance for $\left[64,8\right]$ codes over $\F_5$ and $\left[49,8\right]$ codes over $\F_8$. Due to computational limitations, students were forced to randomly generate configurations $S$ and compute their parameters --- a complete survey over these fields is not computationally feasible.
+
+\section{Generating Non-Equivalent Configurations}
+Because a complete survey of all toric codes and their parameters is not feasible, we instead offer an alternative method to finding new, ``good'' generalized toric codes. For given code parameters $\left[n,k\right]$, it is possible to generate a list of all non-AGL-equivalent configurations and present a user with a representative configuration and its convex hull. A user could then heuristically search the representatives for ones that might yield a better code as compared with its convex hull.
+
+The user is prompted for the size of the field over which calculations are being performed $q$, the size of the configuration $k$, and the dimension of the ambient space for our configuration $r$. Our code will therefore be a $\left[(q-1)^r,k\right]$ code.
+
+Naively, we could generate all non-equivalent configurations with the entered paramaters as follows:
+%\begin{enumerate}
+%\item{} Generate all $\binom{(q-1)^r}{k}$ configurations of points. Let this set be called $\bold{S}$ in such a way that there is total lexicographic ordering on $\bold{S}$.
+%\item{} Select $\bold{S}[[1]]$, the first element of $\bold{S}$.
+%\item{} Generate all AGL-equivalent configurations of $\bold{S}[[1]]$, denoted $\mathrm{AGL}\bold{S}[[1]]$.
+%\item{} Select a representative from $\mathrm{AGL}\bold{S}[[1]]$, $R_1$ (discussed in the next sections).
+%\item{} Let $\bold{S_1}$ be $\bold{S} \setminus \mathrm{AGL}\bold{S}[[1]]$, where $\bold{S_1}$ is still has total ordering.
+%\item{} Continue the process by selecting $\bold{S_1}[[1]]$ and then contructing $\bold{S_2}, \bold{S_3},...,\bold{S_m}$ until $\bold{S_m}$ is empty. We then arrive at a partition:
+%\begin{equation*}
+%\bold{S} = \mathscr{O}(R_1) \cup \mathscr{O}(R_2) \cup ... \cup \mathscr{O}(R_m)
+%\end{equation*}
+%where any two $\mathscr{O}(R_i)$ and $\mathscr{O}(R_j)$ are disjoint.
+%\item{} Let $\Reps{\bold{S}}$ be the set of all representatives.
+%\end{enumerate}
+
+\begin{enumerate}
+\item{} Select the first configuration of $k$ points, sorted lexicographically, denoted $S_1$.
+\item{} Generate the AGL orbit of $S_1$, denoted $\mathscr{O}(S_1)$.
+\item{} Select the element of $\mathscr{O}(S_1)$ with the smallest convex hull, denoted $R_1$; this is the first representative.
+\item{} Now, select the next configuration of $k$ points. If it is in the previously computed orbit, $\mathscr{O}(S_1)$, choose the next configuration. Continue this process until you have some element not in $\mathscr{O}(S_1)$, denoted $S_2$.
+\item{} Like before, generate the AGL orbit of $S_2$, denoted $\mathscr{O}(S_2)$.
+\item{} Select the element of $\mathscr{O}(S_2)$ with the smallest convex hull, denoted $R_2$; this is the second representative.
+\item{} Continuing, find $S_3$, the next element not in any of the previously computed orbits, and generate its orbit to find $R_3$.
+\item{} Continue this process until all configurations of $k$ points are partitioned into $m$ orbits, and return a list of $m$ representatives, $R_1, R_2, ..., R_m$.
+\end{enumerate}
+\begin{Remark}
+Because the set of all configurations partitions into disjoint orbits, the sum of the sizes of all the orbits will be the size of all possible combinations. Once this value is attained, we notice that all subsequent configurations will lie in one the previously computed orbits, so we can stop. The bound is in fact ${(q-1)^r \choose k}$.
+\end{Remark}
+
+
+The user can then visualize each $R_i \in \Reps{\bold{S}}$. In practice, this computation is still very long. An improvement can be made by only considering a subet of $S$ and a subset of affine general linear transormations.
+\subsection{Origin-Inclusive Configurations}
+\begin{Remark}
+Because the affine general linear group will include all translations of the configurations, the orbit of any configuration under the action of AGL will always contain configurations containing the origin.
+\end{Remark}
+
+Therefore, instead of considering $\bold{S}$, we can consider $\bold{S_0}$, all configurations containing the origin. We also introudce the notion of $ZAGL_S \subset AGL$, the set of all AGL transformations that bring the configurations $S$ to a configuration containing zero:
+\begin{equation*}
+\mathrm{ZAGL}_S = \left\{ T(x) = (-s)A + xA \mid s \in S, A \in \mathrm{GL} \right\}
+\end{equation*}
+This can be verified as being an appropriate construction of $\mathrm{ZAGL}_S$.
+\begin{pf}
+To generate the orbit of $S$ only considering those configurations that contain the origin, notice the following:
+\begin{enumerate}
+\item{}If a configuration contains the origin, a GL tranformation will give a configuration which also contains the origin.
+\item{}All configurations containing the origin can be constructed by first performing all translations of $S$ to configurations containing the origin, and then looking at all GL-equivalent configurations of those configurations.
+\end{enumerate}
+
+Let $T$ be a translation of $S$ to another configuration containing the origin. Its clear that we can write $T$ as an element of AGL; $T(x) = (-s) + xI = (-s) + x$, where $s \in S$ and $I$ is the identity element of GL. Now let $G$ be some element of GL, which can be written as an element of AGL; $G(x) = \bar{0} + xA$, $A \in \mathrm{GL}$.
+
+We can now use the associativity of group actions, $G.(T.S) = (GT).S$,
+\begin{eqnarray*}
+G.(T.S) & = & G.\left\{ T(p) \mid x \in S \right\}\\
+& = & G.\left\{(-s) + x \mid s,x \in S \right\}\\
+& = & \left\{ G(y) \mid y \in \left\{(-s) + x \mid s,x \in S \right\} \right\}\\
+& = & \left\{\bar{0} + \left((-s) + x\right)A \mid s,x \in S, A \in \mathrm{GL} \right\}\\
+& = & \left\{ (-s)A + xA \mid s,x \in S, A \in \mathrm{GL} \right\}
+\end{eqnarray*}
+\end{pf}
+(N.B. $\mathrm{ZAGL}_S$ is not a subgroup of AGL and is different for different $S$.)
+
+We can now see an imporved method of generating $\Reps \bold{S}$:
+
+%\begin{enumerate}
+%\item{} Generate all $\binom{(q-1)^r}{k-1}$ configurations of points. To each configuration, append the origin. Let this set be called $\bold{S}$, in such a way that there is total lexicographic ordering on $\bold{S}$.
+%\item{} Select $\bold{S}[[1]]$, the first element of $\bold{S}$.
+%\item{} Generate all ZAGL-equivalent configurations of $\bold{S}[[1]]$, denoted $\mathrm{ZAGL}_{\bold{S}[[1]]}\bold{S}[[1]]$.
+%\item{} Select a representative from $\mathrm{ZAGL}_{\bold{S}[[1]]}\bold{S}[[1]]$, $R_1$.
+%\item{} Let $\bold{S_1}$ be $\bold{S} \setminus \mathrm{ZAGL}_{\bold{S}[[1]]}\bold{S}[[1]]$, where $\bold{S_1}$ is still has total ordering.
+%\item{} Continue the process by selecting $\bold{S_1}[[1]]$ and then contructing $\bold{S_2}, \bold{S_3},...,\bold{S_m}$ until $\bold{S_m}$ is empty. We then arrive at a partition:
+%\begin{equation*}
+%\bold{S} = \mathscr{O}(R_1) \cup \mathscr{O}(R_2) \cup ... \cup \mathscr{O}(R_m)
+%\end{equation*}
+%where any two $\mathscr{O}(R_i)$ and $\mathscr{O}(R_j)$ are disjoint.
+%\item{} Let $\Reps{\bold{S}}$ be the set of all representatives.
+%\end{enumerate}
+
+\begin{enumerate}
+\item{} Select the first configuration of $k-1$ points without the origin, sorted lexicographically. Let $S_1$ be that configuration plus the origin.
+\item{} Generate the ZAGL orbit of $S_1$, denoted $\mathscr{O}(S_1)$.
+\item{} Select the element of $\mathscr{O}(S_1)$ with the smallest convex hull, denoted $R_1$; this is the first representative.
+\item{} Now, select the next configuration of $k-1$ points, and consider that configuration plus the origin. If it is in the previously computed orbit, $\mathscr{O}(S_1)$, choose the next configuration plus the origin. Continue this process until you have some element not in $\mathscr{O}(S_1)$, denoted $S_2$.
+\item{} Like before, generate the ZAGL orbit of $S_2$, denoted $\mathscr{O}(S_2)$.
+\item{} Select the element of $\mathscr{O}(S_2)$ with the smallest convex hull, denoted $R_2$; this is the second representative.
+\item{} Continuing, find $S_3$, the next element not in any of the previously computed orbits, and generate its orbit to find $R_3$.
+\item{} Continue this process until all configurations of $k$ points are partitioned into $m$ orbits, and return a list of $m$ representatives, $R_1, R_2, ..., R_m$.
+\end{enumerate}
+
+In practice, this method has been found to be considerably faster at generating non-equivalent configurations, however is still prohibitabily slow for field size $q>13$ or dimension $d>2$. Note that the number of combinations including the origin is different than the total number of configurations, so the point at which we can stop searching the configuration space is different; it is in fact ${(q-1)^r - 1 \choose k}$.
+
+\subsection{Choosing Representatives}
+The choice of representatives is important because it will be these configurations which can be heuristically searched by humans. Originally, the same total lexicographic ordering was imposed on each orbit, and the first configuration was selected.
+
+Generally, small polygons tend to generate better complete toric codes, evident because they should have a relatively greater minimum distance because of fewer zeros. We therefore now choose the first lexicograhically ordered configuration with the fewest number of lattice points in its convex hull.
+
+\section{Future Research}
+It would be advantageous to precompute a large number of equivalent configurations for small fields --- larger fields tend not to have interesting generalized toric codes as previously discussed. This would eliminate a significant amount of time in the search of champions.
+
+In the same manner as ``codetables.de'' and the small lattice polygons utility created in \cite{poly}, a web application wherein multiple researchers could be searching for new champions would also increase the odds of finding a champion.
+
+
+\section{Acknowledgements}
+The author thanks Professor Ivan Soprunov for his advising of this project.
+
+\bibliography{research}{}
+\bibliographystyle{plain}
+
+
+%\begin{thebibliography}{1}
+%
+%\bibitem{little} Little, J.
+%{\em Remarks on Generalized Toric Codes}. 
+%
+%\bibitem{ruano} Ruano, D.
+%{\em On the structure of generalized toric codes}.
+%
+%\bibitem{census1} Carbonara, A., Murillo, J.P., Ortiz, A.
+%{\em A Census of Two Dimensional Toric Codes over Galois Fields of Sizes 7, 8 and 9}
+%
+%\bibitem{census2} Amaya, J.E., Harry, A., Vega, B.M.
+%{\em A Systematic Census of Generalized Toric Codes over F4, F5 and F16}.
+%
+%\bibitem{is1} Soprunov, I., Soprunova, E.
+%{\em Bringing Toric Codes to the next dimension}
+%
+%\bibitem{is2} Soprunov, I., Soprunova, E.
+%{\em Toric surface codes and Minkowski length of polygons}
+%
+%\bibitem{is3} Soprunov, I.
+%{\em Minimum Distance for Toric Complete Intersection Codes}
+%
+%\bibitem{hansen} Hansen, J.
+%{\em Toric Surfaces and Error–correcting Codes}
+%
+%\bibitem{cohen} Cohen, S.
+%{\em Uniform distribution of polynomials over finite fields}
+%
+%\bibitem{poly}Brown, G., Kasprzyk, A.M.
+%{\em Small polygons and toric codes}
+%\end{thebibliography}
+
+\newpage
+
+\appendix
+\section{representatives.py}
+\begin{verbatim}
+nCk = lambda n,k: int(round(
+    reduce(mul, (float(n-i)/(i+1) for i in range(k)), 1)
+))
+
+def generate_all_configurations(q,l,d):
+    print("Generating all possible configurations... ",end="")
+    all_points = [list(i) for i in product(range(q-1),repeat=d)]
+    zero = all_points[0]
+    all_l_combinations = [[zero] + list(i) for i in combinations(all_points[1:],l-1)]
+    print("Done!")
+    return sorted([Config(q,i) for i in all_l_combinations])
+
+def gen_configs(q,l,d):
+    all_points = [list(i) for i in product(range(q-1),repeat=d)]
+    zero = all_points[0]
+    for i in combinations(all_points[1:],l-1):
+        yield Config(q, [zero] + list(i))
+\end{verbatim}
+
+\section{groups.py}
+\begin{verbatim}
+def Z(n):
+    """
+    Additive group of integers mod n
+    """
+
+    return [EC(i,n) for i in range(n)]
+
+
+
+def U(r):
+    """
+    Multiplicative group of integers mod n
+    """
+
+    return [EC(i,r) for i in range(r) if gcd(i,r) == 1]
+
+
+
+def GL(n,m):
+    """
+    General linear group of n x n matrices over classes of integers mod m
+    """
+    all_arrays = [list(i) for i in product(Z(m), repeat=n**2)]
+    all_2d_arrays = [[i[j:j+n] for j in range(0, n*n, n)]  for i in all_arrays]
+    all_matrices = [M(i) for i in all_2d_arrays]
+    return [i for i in all_matrices if i.det() in U(m)]
+
+
+
+
+def AGL(n,m,g=None):
+    """
+    Semidirect product of the nth direct power of classes of integers mod m with GL(n,m)
+    """
+    if g is None:
+        g = [list(i) for i in product(Z(m), repeat=n)]
+        gl = GL(n,m)
+        return [[M([i]),j] for i in g for j in gl]
+    else:
+        gl = GL(n,m)
+        return [[i,j] for i in g for j in gl]
+\end{verbatim}
+
+\section{convexhull.py}
+\begin{verbatim}
+def compare(a,b):
+    if a < b: return -1
+    elif a > b: return 1
+    else: return 0
+
+def between(a,b,x):
+    """
+    Returns True if a-x-b
+    """
+
+    check_slope = (b[0] - a[0]) * (x[1] - a[1]) == (x[0] - a[0]) * (b[1] - a[1])
+    check_x = abs(compare(a[0], x[0]) + compare(b[0], x[0])) <= 1
+    check_y = abs(compare(a[1], x[1]) + compare(b[1], x[1])) <= 1
+    return (check_slope and check_x and check_y)
+
+def right_turn(p,q,r):
+    if (q[0]*r[1] + p[0]*q[1] + r[0]*p[1] - q[0]*p[1] - r[0]*q[1] - p[0]*r[1]) < 0:
+        return True
+    else:
+        return False
+
+def vertices_convex_hull(P):
+    points = sorted(P)
+    upper = [points[0], points[1]]
+    for p in points[2:]:
+        upper.append(p)
+        while len(upper) > 2 and not right_turn(*upper[-3:]):
+            del upper[-2]
+
+    points = points[::-1]
+    lower = [points[0], points[1]]
+    for p in points[2:]:
+        lower.append(p)
+        while len(lower) > 2 and not right_turn(*lower[-3:]):
+            del lower[-2]
+
+    return upper + lower[1:-1]
+
+def contained_in_polygon(x,V):
+    if len(V) == 2:
+        return between(V[0],V[1],x)
+
+    for i in range(len(V[:-1])):
+        a, b = V[i], V[i+1]
+        if between(a,b,x):
+            break
+        if not right_turn(a,b,x):
+            return False
+    a, b = V[-1], V[0]
+    if between(a,b,x):
+        return True
+    if not right_turn(a,b,x):
+        return False
+
+    return True
+
+def convex_polytope(V):
+    xs = sorted([p[0] for p in V])
+    ys = sorted([p[1] for p in V])
+    minx, maxx = xs[0], xs[-1]+1
+    miny, maxy = ys[0], ys[-1]+1
+    possible_points = [[x,y] for x in range(minx,maxx) for y in range(miny,maxy)]
+    return [p for p in possible_points if contained_in_polygon(p,V)]
+
+def points(P):
+    V = vertices_convex_hull(P)
+    hull = convex_polytope(V)
+    missing = [i for i in hull]
+    for p in P:
+        missing.remove(p)
+    return [hull,missing]
+\end{verbatim}
+
+\section{elements.py}
+\begin{verbatim}
+class EC:
+    """
+    Equivalence class of integers mod n
+    """
+
+    def __init__(self, i, n):
+        self._i = i
+        self._n = n
+
+    @property
+    def i(self):
+        return self._i % self._n
+
+    @property
+    def n(self):
+        return self._n
+
+    def __repr__(self):
+        return "<EC " + str(self.i) + " mod " + str(self.n) + ">"
+
+    def __hash__(self):
+        return hash(int(self))
+
+    def __str__(self):
+        return str(self.i)
+
+    def __int__(self):
+        return self.i
+
+    def __eq__(self, other):
+        if type(other) is type(self):
+            if (self.n == other.n):
+                if (self.i == other.i):
+                    return True
+                else:
+                    return False
+            else:
+                return NotImplemented
+        else:
+            return NotImplemented
+
+    def __lt__(self, other):
+        if type(other) is type(self):
+            if (self.n == other.n):
+                if (self.i < other.i):
+                    return True
+                else:
+                    return False
+            else:
+                return NotImplemented
+        else:
+            return NotImplemented
+
+    def __add__(self, other):
+        if type(other) is type(self):
+            if self.n == other.n:
+                return EC(int(self)+int(other), self.n)
+            else:
+                return
+        else:
+            return EC(int(self)+int(other), self.n)
+
+    def __radd__(self, other):
+        return self+other
+
+    def __sub__(self, other):
+        if type(other) is type(self):
+            if self.n == other.n:
+                return EC(int(self)-int(other), self.n)
+            else:
+                return
+        else:
+            return EC(int(self)-int(other), self.n)
+
+    def __mul__(self, other):
+        if type(other) is type(self):
+            if self.n == other.n:
+                return EC(int(self)*int(other), self.n)
+            else:
+                return
+        else:
+            return EC(int(self)*int(other), self.n)
+
+    def __rmul__(self, other):
+        return self*other
+
+    def __pow__(self, other):
+        return EC(pow(self.i,int(other),self.n),self.n)
+
+    def __neg__(self):
+        return EC(-int(self), self.n)
+
+
+
+class M:
+    """
+    2 dimensional matrix
+    """
+    
+    def __init__(self,m):
+        self._m = m
+
+    @property
+    def size(self):
+        return (len(self._m),len(self._m[0]))
+
+    @property
+    def m(self):
+        return self._m
+
+    def __repr__(self):
+        return "<Matrix " + str(hash(self)) + ">"
+
+    def __hash__(self):
+        t = tuple([tuple(i) for i in self])
+        return hash(tuple(t))
+
+    def __str__(self):
+        return str(self._m)
+
+    def __iter__(self):
+        return iter(self._m)
+
+    def __getitem__(self, key):
+        return self._m[key]
+
+    def __len__(self):
+        return len(self._m)
+
+    def __eq__(self, other):
+        return self.m == other.m
+
+    def __add__(self, other):
+        if self.size == other.size:
+            matrix = [[self[i][j] + other[i][j] for j in range(self.size[1])] for i in range(self.size[0])]
+            return M(matrix)
+        else:
+            return NotImplemented
+
+    def __mul__(self, other):
+        if (type(other) is type(self)) or (type(other) is type([1])):
+            if self.size[1] == other.size[0]:
+                m = self.size[0]
+                n = self.size[1]
+                p = other.size[1]
+                matrix = [[sum([self[i][k] * other[k][j] for k in range(n)]) for j in range(p)] for i in range(m)]
+                return M(matrix)
+            else:
+                return NotImplemented
+        else:
+            return NotImplemented
+
+    def __rmul__(self, other):
+        return M([[other*j for j in i] for i in self])
+
+    def __neg__(self, other):
+        return -1*self
+
+    def det(self):
+        if self.size[0] == self.size[1]:
+            if self.size[0] == 1:
+                return self[0][0]
+            elif self.size[1] == 2:
+                return self[0][0]*self[1][1] - self[0][1]*self[1][0] 
+            if self.size[0] == 3:
+                return self[0][0]*(self[1][1]*self[2][2]-self[1][2]*self[2][1]) - self[0][1]*(self[1][0]*self[2][2]-self[1][2]*self[2][0]) + self[0][2]*(self[1][0]*self[2][1]-self[1][1]*self[2][0])
+        else:
+            return NotImplemented
+
+
+class FE:
+    """
+    Element of a Finite Field
+    """
+
+    def __init__(self,f,a,n):
+        self._a = a
+        self._n = n
+        self._f = f
+
+    @property
+    def field(self):
+        return self._f
+
+    @property
+    def a(self):
+        return self._a
+
+    @property
+    def n(self):
+        return self._n
+
+    def __repr__(self):
+        return str(self.a)+"^"+str(self.n)
+
+    def __hash__(self):
+        return self.i
+
+    def __int__(self):
+        if self.a == 0:
+            return self.field[0]
+        else:
+            return self.field[1:][self.n]
+
+    def __eq__(self,other):
+        return (self.field == other.field) and (self.a == other.a) and (self.n == other.n)
+
+    def __add__(self,other):
+        return self.field.add(self,other)
+
+    def __mul__(self,other):
+        return self.field.mul(self,other)
+
+    def __pow__(self,other):
+        return self.field.pow(self,other)
+
+if __name__ == "__main__":
+    m1 = M([[2,0]])
+    m2 = M([[2,3],[3,2]])
+    print(m1*m2)
+
+\end{verbatim}
+\section{fields.py}
+\begin{verbatim}
+class GF:
+    """
+    Galois Field
+    """
+
+    def __init__(self,q):
+        if q in [2,3,5,7,9,11]:
+            self._p = q
+            self._n = 1
+        elif q == 4:
+            self._p = 2
+            self._n = 2
+        elif q == 8:
+            self._p = 2
+            self._n = 3
+        a = prime_gen[self.q]
+        self._add_table = add_table[self._p**self._n]
+        self._e = [FE(self,0,0)]+[FE(self,a,i) for i in range(self.q-1)]
+
+    @property
+    def p(self):
+        return self._p
+
+    @property
+    def n(self):
+        return self._n
+
+    @property
+    def q(self):
+        return self.p**self.n
+    
+    def __repr__(self):
+        return "GF("+str(self.n)+")"
+
+    def __hash__(self):
+        return self.q
+
+    def __iter__(self):
+        return iter(self._e)
+
+    def __len__(self):
+        return self.q
+
+    def __getitem__(self,key):
+        return self._e[key]
+
+    def mul(self,x,y):
+        if x.a == 0 or y.a == 0:
+            return self[0]
+        else:
+            return self[1:][(x.n+y.n)%(self.q-1)]
+
+    def pow(self,x,n):
+        if x.a == 0:
+            return self[0]
+        else:
+            return self[1:][(x.n*int(n))%(self.q-1)]
+
+    def add(self,x,y):
+        if x.a == 0:
+            return y
+        elif y.a == 0:
+            return x
+        else:
+            return self[self._add_table[(x.n+1)][y.n+1]]
+\end{verbatim}
+\section{polynomials.py}
+\begin{verbatim}
+class Polynomial:
+    def __init__(self,q,powers):
+        self._q = q
+        self._powers = powers
+        self._field = GF(q)
+        self._l = len(powers)
+        self._d = len(powers[0])
+
+    def eval(self,point,c):
+        field = self._field
+        result = field[0]
+        for i in range(self._l):
+            m = c[i]
+            for j in range(self._d):
+                m = m * (point[j]**self._powers[i][j])
+            result = result +  m
+        return result
+
+    def max_zeros(self):
+        field = self._field
+        zero = field[0]
+
+        coefficients = list(product(list(field),repeat=self._l))[1:]
+        torus = list(product(list(field)[1:],repeat=self._d))
+
+        max_num_zeros = 0
+        max_cos = []
+        max_roots = []
+
+        for c in coefficients:
+            num_zeros = 0
+            roots = []
+            for p in torus:
+                if self.eval(p,c) == zero:
+                    num_zeros = num_zeros + 1
+                    roots.append(p)
+
+            if num_zeros > max_num_zeros:
+                max_num_zeros = num_zeros
+                max_cos = c
+                max_roots = roots
+
+        return(max_num_zeros,max_cos,max_roots)
+
+
+\end{verbatim}
+\section{configurations.py}
+\begin{verbatim}
+class V:
+    """
+    Position vector of a point in a configuration
+    """
+
+    def __init__(self,q,p):
+        self._q = q
+        if isinstance(p,M):
+            self._v = p
+            self._p = [i.i for i in p[0]]
+        else:
+            self._p = p
+            self._v = M([[EC(i,q-1) for i in p]])
+
+    def __repr__(self):
+        return "<V " + str(self._v) + ">"
+
+    def __hash__(self):
+        return hash(tuple(self._p))
+
+    def __str__(self):
+        toreturn = ""
+        for i in self:
+                toreturn = toreturn + str(i) + ","
+        return "(" + toreturn[:-1] + ")"
+
+    def __iter__(self):
+        return iter(self._v[0])
+
+    def __getitem__(self, key):
+        return self._v[0][key]
+
+    def __len__(self):
+        return len(self._v[0])
+
+    def __eq__(self, other):
+        return (self._v == other._v)
+
+    def __lt__(self, other):
+        if len(self) < len(other):
+            default = True
+            l = len(self)
+        else:
+            default = False
+            l = len(other)
+        for i in range(l):
+            if self[i] < other[i]:
+                return True
+            elif self[i] > other[i]:
+                return False
+        return default
+
+    def __rmul__(self, other):
+        return V(self._q,other[0] + (self._v * other[1]))
+
+class Config:
+    """
+    Configuration of points
+    """
+
+    def __init__(self,q,P):
+        self._q = q
+        if isinstance(P[0],V):
+            self._V = sorted(P)
+            self._P = [v._p for v in self._V]
+        else:
+            self._P = sorted(P)
+            self._V = [V(q,p) for p in self._P]
+        self._d = len(self._P[0])
+
+    def __repr__(self):
+        return "<Config " + str(self._V) + ">"
+
+    def __hash__(self):
+        return hash(tuple(iter(self)))
+
+    def __str__(self):
+        toreturn = ""
+        for i in self:
+            toreturn = toreturn + str(i) + ","
+        return "{" + toreturn[:-1] + "}"
+
+    def __iter__(self):
+        return iter(self._V)
+
+    def __getitem__(self,key):
+        return self._V[key]
+
+    def __len__(self):
+        return len(self._V)
+
+    def __eq__(self,other):
+        return (self._V == other._V)
+
+    def __lt__(self, other):
+        if len(self) < len(other):
+            default = True
+            l = len(self)
+        else:
+            default = False
+            l = len(other)
+        for i in range(l):
+            if self[i] < other[i]:
+                return True
+            elif self[i] > other[i]:
+                return False
+        return default
+
+    def __rmul__(self,other):
+        return Config(self._q,[other*v for v in self])
+
+    def orbit(self,gl=None):
+        if hasattr(self,"_orbit"):
+            return self._orbit
+
+        if gl is None:
+            gl = GL(self._d,self._q-1)
+        translations_to_zero = [-1*(i._v) for i in self]
+        ZAGL = [[i*j,j] for i in translations_to_zero for j in gl]
+        self._orbit = sorted(list(set([g*self for g in ZAGL])))
+        #for c in self._orbit: c._orbit = self._orbit
+        return self._orbit
+
+    def aglorbit(self):
+        if hasattr(self,"_aglorbit"):
+            return self._aglorbit
+
+        agl = AGL(self._d,self._q-1)
+        self._aglorbit = sorted(list(set([g*self for g in agl])))
+        for c in self._aglorbit: c._aglorbit = self._aglorbit
+        return self._aglorbit
+
+    def aglorbit_gen(self):
+        agl = AGL(self._d,self._q-1)
+        for g in agl:
+            yield g*self
+
+    def missing_points(self):
+        if self._d == 2:
+            return convexhull.points(self._P)[1]
+        else:
+            return None
+
+    def complete_configuration(self):
+        if self._d == 2:
+            return Config(self._q,convexhull.points(self._P)[0])
+        else:
+            return None
+
+    def always_generalized(self):
+        if self._d != 2: return None
+
+        if len(self.missing_points()) == 0:
+            return False
+        for i in self.aglorbit_gen():
+            if len(i.missing_points()) == 0:
+                return False
+        return True
+
+    def size_convex_hull(self):
+        return len(self._P) + len(self.missing_points())
+
+    def z(self,regen=False):
+        if hasattr(self,"_zeros") and not regen:
+            return self._zeros
+        polynomial = Polynomial(self._q,self._P)
+        self._zeros = polynomial.max_zeros()
+        return self._zeros
+\end{verbatim}
+
+\section{Example Output}
+All Generalized Toric Codes of block length 49 and dimension 4 over $\F_8$, see below.
+
+\end{document}
